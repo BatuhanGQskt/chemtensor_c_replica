@@ -1,7 +1,7 @@
 [![CI](https://github.com/qc-tum/chemtensor/actions/workflows/ci.yml/badge.svg)](https://github.com/qc-tum/chemtensor/actions/workflows/ci.yml)
 
 
-ChemTensor (Replica to Test Mojo implementation, original code belong to Prof. C. Mendl named qc-tum/chemtensor)
+ChemTensor (Replica to Test Mojo implementation, original code belong to Prof. C. Mendl and his team named qc-tum/chemtensor)
 ==========
 
 Tensor network algorithms for chemical systems.
