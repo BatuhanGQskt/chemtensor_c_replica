@@ -60,6 +60,13 @@ if (OpenMP_C_FOUND)
     target_link_libraries( perf_dmrg PRIVATE OpenMP::OpenMP_C)
 endif()
 
+add_executable(            main ${CHEMTENSOR_SOURCES} "main.c")
+target_include_directories(main PRIVATE ${CHEMTENSOR_DIRS} ${BLAS_INCLUDE_DIRS} ${LAPACK_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
+target_link_libraries(     main PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${HDF5_LIBRARIES})
+if (OpenMP_C_FOUND)
+    target_link_libraries( main PRIVATE OpenMP::OpenMP_C)
+endif()
+
 add_test(NAME chemtensor_test COMMAND chemtensor_test)
 
 install(TARGETS chemtensor_pymodule DESTINATION .)
