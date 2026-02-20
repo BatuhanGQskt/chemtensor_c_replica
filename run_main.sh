@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build C project, run main, and copy generated JSON reference data to Mojo test_data.
 # Touch main.c so that included manual_tests/mpo.c changes are picked up on rebuild.
-# Output: generated/mpo/*.json and generated/dmrg/*.json (created under build/ when run from build).
+# Output: generated/mpo/*.json, generated/dmrg/*.json, generated/mps/*.json (created under build/ when run from build).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR" || exit 1
@@ -28,8 +28,8 @@ if ! make; then
     exit 1
 fi
 
-# Create output dirs so C can write generated/mpo/ and generated/dmrg/ (relative to build/)
-mkdir -p generated/mpo generated/dmrg
+# Create output dirs so C can write generated/mpo/, generated/dmrg/, generated/mps/ (relative to build/)
+mkdir -p generated/mpo generated/dmrg generated/mps
 
 echo "==> Running ./main..."
 if ! ./main; then
@@ -41,12 +41,7 @@ fi
 MOJO_TEST_DATA="${SCRIPT_DIR}/../chemtensor_mojo/chemtensor_mojo/test_data"
 if [ -d "$MOJO_TEST_DATA" ]; then
     echo "==> Copying generated JSONs to Mojo test_data..."
-    for f in generated/mpo/*.json generated/dmrg/*.json; do
-        [ -f "$f" ] || continue
-        cp "$f" "$MOJO_TEST_DATA/" && echo "  Copied $f"
-    done
-    # MPS reference files (written to build/ by main)
-    for f in mps_product_*.json; do
+    for f in generated/mpo/*.json generated/dmrg/*.json generated/mps/*.json; do
         [ -f "$f" ] || continue
         cp "$f" "$MOJO_TEST_DATA/" && echo "  Copied $f"
     done

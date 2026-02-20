@@ -80,7 +80,7 @@ static int run_mps_tests(void) {
         double n = mps_norm(&psi);
         printf("Product state |0,0,0> (3 sites, d=2): norm = %.10f\n", n);
 
-        export_mps_observables_to_json(&psi, "mps_product_3sites_d2_basis_000.json");
+        export_mps_observables_to_json(&psi, "generated/mps/mps_product_3sites_d2_basis_000.json");
         delete_mps(&psi);
     }
 
@@ -102,7 +102,7 @@ static int run_mps_tests(void) {
         double n = mps_norm(&psi);
         printf("Product state |1,0,1> (3 sites, d=2): norm = %.10f\n", n);
 
-        export_mps_observables_to_json(&psi, "mps_product_3sites_d2_basis_101.json");
+        export_mps_observables_to_json(&psi, "generated/mps/mps_product_3sites_d2_basis_101.json");
         delete_mps(&psi);
     }
 
