@@ -251,34 +251,33 @@ void create_ising_1d_mpo_tensors(const int nsites, const double J, const double 
         
         if (i == 0) {
             // Left boundary: shape [1, d, d, 3]
-            // W[0] = [ -h*Z - g*X,  Id,  Z ]
+            // W[0] = [ -h*Z - g*X,  Z,  Id ]
             set_mpo_operator_at(&site_tensor, 0, 0, &Z, -h);  // -h*Z at [0,0]
             set_mpo_operator_at(&site_tensor, 0, 0, &X, -g);  // -g*X at [0,0] (add)
-            set_mpo_operator_at(&site_tensor, 0, 1, &Id, 1.0);  // Id at [0,1]
-            set_mpo_operator_at(&site_tensor, 0, 2, &Z, 1.0);  // Z at [0,2]
+            set_mpo_operator_at(&site_tensor, 0, 1, &Z, 1.0);   // Z at [0,1]
+            set_mpo_operator_at(&site_tensor, 0, 2, &Id, 1.0);  // Id at [0,2]
         }
         else if (i == nsites - 1) {
             // Right boundary: shape [3, d, d, 1]
             // W[-1] = [ Id ]
-            //         [ Z ]
-            //         [-J*Z - h*Z - g*X ]
+            //         [ -J*Z ]
+            //         [ -h*Z - g*X ]
             set_mpo_operator_at(&site_tensor, 0, 0, &Id, 1.0);   // Id at [0,0]
-            set_mpo_operator_at(&site_tensor, 1, 0, &Z, 1.0);   // Z at [1,0]
-            set_mpo_operator_at(&site_tensor, 2, 0, &Z, -J);    // -J*Z at [2,0]
-            set_mpo_operator_at(&site_tensor, 2, 0, &Z, -h);    // -h*Z at [2,0] (add)
+            set_mpo_operator_at(&site_tensor, 1, 0, &Z, -J);    // -J*Z at [1,0]
+            set_mpo_operator_at(&site_tensor, 2, 0, &Z, -h);    // -h*Z at [2,0]
             set_mpo_operator_at(&site_tensor, 2, 0, &X, -g);    // -g*X at [2,0] (add)
         }
         else {
             // Bulk sites: shape [3, d, d, 3]
             // W[i] = [ Id    0    0 ]
-            //        [ Z    0    0 ]
-            //        [-h*Z-g*X  Id  Z ]
+            //        [ -J*Z  0    0 ]
+            //        [-h*Z-g*X  Z   Id ]
             set_mpo_operator_at(&site_tensor, 0, 0, &Id, 1.0);   // Id at [0,0]
-            set_mpo_operator_at(&site_tensor, 1, 0, &Z, 1.0);   // Z at [1,0]
+            set_mpo_operator_at(&site_tensor, 1, 0, &Z, -J);    // -J*Z at [1,0]
             set_mpo_operator_at(&site_tensor, 2, 0, &Z, -h);    // -h*Z at [2,0]
             set_mpo_operator_at(&site_tensor, 2, 0, &X, -g);    // -g*X at [2,0] (add)
-            set_mpo_operator_at(&site_tensor, 2, 1, &Id, 1.0);   // Id at [2,1]
-            set_mpo_operator_at(&site_tensor, 2, 2, &Z, 1.0);   // Z at [2,2]
+            set_mpo_operator_at(&site_tensor, 2, 1, &Z, 1.0);    // Z at [2,1]
+            set_mpo_operator_at(&site_tensor, 2, 2, &Id, 1.0);   // Id at [2,2]
         }
         
         // Convert dense tensor to block sparse tensor
@@ -343,12 +342,12 @@ void create_heisenberg_xxz_1d_mpo_tensors(const int nsites, const double J, cons
         memset(data, 0, total_elements * sizeof(double));
         
         if (i == 0) {
-            // Left boundary: [1, d, d, 5]  W[0] = [ -h*Z,  I,  S+,  S-,  D*Z ]
+            // Left boundary: [1, d, d, 5]  W[0] = [ -h*Z,  S+,  S-,  D*Z,  I ]
             set_mpo_operator_at(&site_tensor, 0, 0, &Z, -h);
-            set_mpo_operator_at(&site_tensor, 0, 1, &Id, 1.0);
-            set_mpo_operator_at(&site_tensor, 0, 2, &Sp, 1.0);
-            set_mpo_operator_at(&site_tensor, 0, 3, &Sm, 1.0);
-            set_mpo_operator_at(&site_tensor, 0, 4, &Z, D);
+            set_mpo_operator_at(&site_tensor, 0, 1, &Sp, 1.0);
+            set_mpo_operator_at(&site_tensor, 0, 2, &Sm, 1.0);
+            set_mpo_operator_at(&site_tensor, 0, 3, &Z, D);
+            set_mpo_operator_at(&site_tensor, 0, 4, &Id, 1.0);
         }
         else if (i == nsites - 1) {
             // Right boundary: [5, d, d, 1]  [ I, -2J*S-, -2J*S+, -J*Z, -h*Z ]^T
@@ -365,10 +364,10 @@ void create_heisenberg_xxz_1d_mpo_tensors(const int nsites, const double J, cons
             set_mpo_operator_at(&site_tensor, 2, 0, &Sp, -2.0 * J);
             set_mpo_operator_at(&site_tensor, 3, 0, &Z, -J);
             set_mpo_operator_at(&site_tensor, 4, 0, &Z, -h);
-            set_mpo_operator_at(&site_tensor, 4, 1, &Id, 1.0);
-            set_mpo_operator_at(&site_tensor, 4, 2, &Sp, 1.0);
-            set_mpo_operator_at(&site_tensor, 4, 3, &Sm, 1.0);
-            set_mpo_operator_at(&site_tensor, 4, 4, &Z, D);
+            set_mpo_operator_at(&site_tensor, 4, 1, &Sp, 1.0);
+            set_mpo_operator_at(&site_tensor, 4, 2, &Sm, 1.0);
+            set_mpo_operator_at(&site_tensor, 4, 3, &Z, D);
+            set_mpo_operator_at(&site_tensor, 4, 4, &Id, 1.0);
         }
         
         dense_to_block_sparse_tensor_entries(&site_tensor, &mpo->a[i]);
@@ -473,12 +472,12 @@ void create_bose_hubbard_1d_mpo_tensors(const int nsites, const long d, const do
         
         if (i == 0) {
             // Left boundary: [1, d, d, 4]
-            // W[0] = [ (u/2)*n(n-1) - mu*n,  Id,  b^dag,  b ]
+            // W[0] = [ (u/2)*n(n-1) - mu*n,  b^dag,  b,  Id ]
             set_mpo_operator_at(&site_tensor, 0, 0, &n_n_minus_1, u/2.0);
             set_mpo_operator_at(&site_tensor, 0, 0, &n, -mu);
-            set_mpo_operator_at(&site_tensor, 0, 1, &Id, 1.0);
-            set_mpo_operator_at(&site_tensor, 0, 2, &b_dag, 1.0);
-            set_mpo_operator_at(&site_tensor, 0, 3, &b, 1.0);
+            set_mpo_operator_at(&site_tensor, 0, 1, &b_dag, 1.0);
+            set_mpo_operator_at(&site_tensor, 0, 2, &b, 1.0);
+            set_mpo_operator_at(&site_tensor, 0, 3, &Id, 1.0);
         }
         else if (i == nsites - 1) {
             // Right boundary: [4, d, d, 1]
@@ -495,9 +494,9 @@ void create_bose_hubbard_1d_mpo_tensors(const int nsites, const long d, const do
             set_mpo_operator_at(&site_tensor, 2, 0, &b_dag, -t);
             set_mpo_operator_at(&site_tensor, 3, 0, &n_n_minus_1, u/2.0);
             set_mpo_operator_at(&site_tensor, 3, 0, &n, -mu);
-            set_mpo_operator_at(&site_tensor, 3, 1, &Id, 1.0);
-            set_mpo_operator_at(&site_tensor, 3, 2, &b_dag, 1.0);
-            set_mpo_operator_at(&site_tensor, 3, 3, &b, 1.0);
+            set_mpo_operator_at(&site_tensor, 3, 1, &b_dag, 1.0);
+            set_mpo_operator_at(&site_tensor, 3, 2, &b, 1.0);
+            set_mpo_operator_at(&site_tensor, 3, 3, &Id, 1.0);
         }
         
         dense_to_block_sparse_tensor_entries(&site_tensor, &mpo->a[i]);
