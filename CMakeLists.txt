@@ -1,4 +1,4 @@
-﻿
+
 cmake_minimum_required(VERSION 3.15)
 
 project(chemtensor LANGUAGES C)
@@ -60,7 +60,7 @@ if (OpenMP_C_FOUND)
     target_link_libraries( perf_dmrg PRIVATE OpenMP::OpenMP_C)
 endif()
 
-add_executable(            main ${CHEMTENSOR_SOURCES} "main.c")
+add_executable(            main ${CHEMTENSOR_SOURCES} "main.c" "manual_tests/dmrg_results_json.c" "manual_tests/mpo_export_json.c" "manual_tests/mps_export_json.c")
 target_include_directories(main PRIVATE ${CHEMTENSOR_DIRS} ${BLAS_INCLUDE_DIRS} ${LAPACK_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
 target_link_libraries(     main PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${HDF5_LIBRARIES})
 if (OpenMP_C_FOUND)
