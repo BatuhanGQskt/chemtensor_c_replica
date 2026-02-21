@@ -1,14 +1,54 @@
 /// \file mpo_export_json.c
 /// \brief Export MPO tensors to JSON format for comparison with Mojo implementation.
 
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "mpo_export_json.h"
 #include "../src/tensor/block_sparse_tensor.h"
 #include "../src/tensor/dense_tensor.h"
 #include "../src/operator/mpo.h"
 
+static int ensure_parent_dirs(const char* path)
+{
+    if (!path || path[0] == '\0')
+        return 0;
+
+    char buf[4096];
+    size_t n = strlen(path);
+    if (n >= sizeof(buf))
+        return -1;
+    memcpy(buf, path, n + 1);
+
+    char* last_slash = strrchr(buf, '/');
+    if (!last_slash)
+        return 0;
+    if (last_slash == buf)
+        return 0;
+
+    *last_slash = '\0';
+
+    for (char* p = buf + 1; *p; p++) {
+        if (*p != '/')
+            continue;
+        *p = '\0';
+        if (mkdir(buf, 0777) != 0 && errno != EEXIST)
+            return -1;
+        *p = '/';
+    }
+    if (mkdir(buf, 0777) != 0 && errno != EEXIST)
+        return -1;
+
+    return 0;
+}
+
 void export_mpo_to_json(const struct mpo* mpo, const char* filename) {
+    if (ensure_parent_dirs(filename) != 0) {
+        fprintf(stderr, "Error: Could not create parent directories for '%s'\n", filename);
+        return;
+    }
+
     FILE* f = fopen(filename, "w");
     if (!f) {
         fprintf(stderr, "Error: Could not open file '%s' for writing\n", filename);

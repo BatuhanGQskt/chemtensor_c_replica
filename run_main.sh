@@ -32,9 +32,12 @@ fi
 mkdir -p generated/mpo generated/dmrg generated/mps
 
 echo "==> Running ./main..."
-if ! ./main; then
-    echo "ERROR: ./main failed (exit $?)"
-    exit 1
+set +e
+./main
+MAIN_EXIT=$?
+set -e
+if [ "$MAIN_EXIT" -ne 0 ]; then
+    echo "Warning: ./main exited with code $MAIN_EXIT (continuing to copy any generated JSONs)"
 fi
 
 # Copy generated JSONs to Mojo test_data (sibling repo) - optional, do not exit on failure

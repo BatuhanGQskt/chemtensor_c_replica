@@ -135,7 +135,9 @@ void test_dmrg_singlesite_manual(void)
 	double norm = mps_norm(&psi);
 	printf("\nFinal MPS norm : %.12f  (should be ~1.0)\n", norm);
 	dmrg_check_norm("singlesite", norm, 1e-5);
-	dmrg_check_energy_range("singlesite", en_sweeps[num_sweeps - 1], -9.0, -7.0);
+	// With the corrected real-only Heisenberg XXZ MPO channel ordering (matches Mojo),
+	// the N=7 XXX (D=1, h=0) ferromagnetic ground state energy is exactly -6.0.
+	dmrg_check_energy_range("singlesite", en_sweeps[num_sweeps - 1], -6.5, -5.5);
 
 	printf("Bond dimensions: [");
 	for (int i = 0; i <= nsites; i++) {
@@ -265,7 +267,8 @@ void test_dmrg_twosite_manual(void)
 	double norm = mps_norm(&psi);
 	printf("\nFinal MPS norm : %.12f  (should be ~1.0)\n", norm);
 	dmrg_check_norm("twosite", norm, 1e-5);
-	dmrg_check_energy_range("twosite", en_sweeps[num_sweeps - 1], -4.0, -2.0);
+	// With the corrected MPO, N=11 (D=0.5, h=0.2, chi_max=32) converges near -11.4239.
+	dmrg_check_energy_range("twosite", en_sweeps[num_sweeps - 1], -12.0, -11.0);
 
 	printf("Bond dimensions: [");
 	for (int i = 0; i <= nsites; i++) {

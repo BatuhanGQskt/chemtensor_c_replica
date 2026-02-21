@@ -13,6 +13,6 @@ int main() {
     dense_tensor_dot_test();
     mpo_tests();  // This will also export reference data
     mps_tests();  // Export MPS observables for Mojo comparison
-    // dmrg_tests();
+    dmrg_tests();
     return 0;
 }

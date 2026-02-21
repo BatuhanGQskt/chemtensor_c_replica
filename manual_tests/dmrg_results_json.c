@@ -2,7 +2,46 @@
 /// \brief Write DMRG results to JSON (see dmrg_results_json.h and DMRG_RESULTS_JSON_SCHEMA.md).
 
 #include "dmrg_results_json.h"
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+
+static int ensure_parent_dirs(const char* path)
+{
+	// Create parent directories for `path` if needed (mkdir -p behavior).
+	// This is intentionally lightweight and only handles '/' separators (Linux/WSL).
+	if (!path || path[0] == '\0')
+		return 0;
+
+	char buf[4096];
+	size_t n = strlen(path);
+	if (n >= sizeof(buf))
+		return -1;
+	memcpy(buf, path, n + 1);
+
+	char* last_slash = strrchr(buf, '/');
+	if (!last_slash)
+		return 0; // current directory
+	if (last_slash == buf)
+		return 0; // path like "/file.json" -> root exists
+
+	*last_slash = '\0';
+
+	// Iteratively create each component.
+	for (char* p = buf + 1; *p; p++) {
+		if (*p != '/')
+			continue;
+		*p = '\0';
+		if (mkdir(buf, 0777) != 0 && errno != EEXIST)
+			return -1;
+		*p = '/';
+	}
+	if (mkdir(buf, 0777) != 0 && errno != EEXIST)
+		return -1;
+
+	return 0;
+}
 
 int dmrg_results_to_json(
 	const char* path,
@@ -17,6 +56,9 @@ int dmrg_results_to_json(
 	int num_bond_dims,
 	double norm)
 {
+	if (ensure_parent_dirs(path) != 0)
+		return -1;
+
 	FILE* f = fopen(path, "w");
 	if (!f)
 		return -1;
