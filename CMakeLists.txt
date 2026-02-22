@@ -74,6 +74,11 @@ if (OpenMP_C_FOUND)
     target_link_libraries( main PRIVATE OpenMP::OpenMP_C)
 endif()
 
+# RNG export for Mojo rng_c_compat comparison (no BLAS/LAPACK)
+add_executable(            rng_export "src/util/pcg_basic.c" "src/util/rng.c" "test/util/rng_export.c")
+target_include_directories( rng_export PRIVATE ${CHEMTENSOR_DIRS})
+target_link_libraries(     rng_export PRIVATE m)
+
 add_test(NAME chemtensor_test COMMAND chemtensor_test)
 
 install(TARGETS chemtensor_pymodule DESTINATION .)

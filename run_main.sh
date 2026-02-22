@@ -40,6 +40,12 @@ if [ "$MAIN_EXIT" -ne 0 ]; then
     echo "Warning: ./main exited with code $MAIN_EXIT (continuing to copy any generated JSONs)"
 fi
 
+# Export RNG sequence for Mojo rng_c_compat comparison test
+if [ -x ./rng_export ]; then
+    echo "==> Running ./rng_export 42 64..."
+    ./rng_export 42 64 > generated/rng_reference.txt || true
+fi
+
 # Copy generated JSONs to Mojo test_data (sibling repo) - optional, do not exit on failure
 MOJO_TEST_DATA="${SCRIPT_DIR}/../chemtensor_mojo/chemtensor_mojo/test_data"
 if [ -d "$MOJO_TEST_DATA" ]; then
@@ -48,6 +54,7 @@ if [ -d "$MOJO_TEST_DATA" ]; then
         [ -f "$f" ] || continue
         cp "$f" "$MOJO_TEST_DATA/" && echo "  Copied $f"
     done
+    [ -f generated/rng_reference.txt ] && cp generated/rng_reference.txt "$MOJO_TEST_DATA/" && echo "  Copied generated/rng_reference.txt"
 else
     echo "Warning: Mojo test_data not found at $MOJO_TEST_DATA (skipping copy)"
 fi
@@ -55,11 +62,12 @@ fi
 # Run perf_contractions (writes to generated/perf/contraction_timings.jsonl) and copy to Mojo results/perf/
 if [ -x ./perf_contractions ]; then
     echo "==> Running ./perf_contractions..."
-    ./perf_contractions 6 2 16 generated/perf/contraction_timings.jsonl || true
+    mkdir -p generated/perf
+    ./perf_contractions || true
     MOJO_RESULTS_PERF="${SCRIPT_DIR}/../chemtensor_mojo/chemtensor_mojo/results/perf"
     if [ -d "$(dirname "$MOJO_RESULTS_PERF")" ]; then
         mkdir -p "$MOJO_RESULTS_PERF"
-        for f in generated/perf/*.jsonl; do
+        for f in generated/perf/*.jsonl generated/perf/random_mps_psi.json generated/perf/random_mps_chi.json; do
             [ -f "$f" ] || continue
             cp "$f" "$MOJO_RESULTS_PERF/" && echo "  Copied $f -> Mojo results/perf/"
         done
