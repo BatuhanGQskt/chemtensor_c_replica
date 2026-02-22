@@ -60,6 +60,13 @@ if (OpenMP_C_FOUND)
     target_link_libraries( perf_dmrg PRIVATE OpenMP::OpenMP_C)
 endif()
 
+add_executable(            perf_contractions ${CHEMTENSOR_SOURCES} "perf/perf_contractions.c")
+target_include_directories(perf_contractions PRIVATE ${CHEMTENSOR_DIRS} ${BLAS_INCLUDE_DIRS} ${LAPACK_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
+target_link_libraries(     perf_contractions PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${HDF5_LIBRARIES})
+if (OpenMP_C_FOUND)
+    target_link_libraries( perf_contractions PRIVATE OpenMP::OpenMP_C)
+endif()
+
 add_executable(            main ${CHEMTENSOR_SOURCES} "main.c" "manual_tests/dmrg_results_json.c" "manual_tests/mpo_export_json.c" "manual_tests/mps_export_json.c")
 target_include_directories(main PRIVATE ${CHEMTENSOR_DIRS} ${BLAS_INCLUDE_DIRS} ${LAPACK_INCLUDE_DIRS} ${HDF5_INCLUDE_DIRS})
 target_link_libraries(     main PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES} ${HDF5_LIBRARIES})

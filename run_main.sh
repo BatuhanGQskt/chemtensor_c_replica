@@ -28,8 +28,8 @@ if ! make; then
     exit 1
 fi
 
-# Create output dirs so C can write generated/mpo/, generated/dmrg/, generated/mps/ (relative to build/)
-mkdir -p generated/mpo generated/dmrg generated/mps
+# Create output dirs so C can write generated/mpo/, generated/dmrg/, generated/mps/, generated/perf/ (relative to build/)
+mkdir -p generated/mpo generated/dmrg generated/mps generated/perf
 
 echo "==> Running ./main..."
 set +e
@@ -50,6 +50,20 @@ if [ -d "$MOJO_TEST_DATA" ]; then
     done
 else
     echo "Warning: Mojo test_data not found at $MOJO_TEST_DATA (skipping copy)"
+fi
+
+# Run perf_contractions (writes to generated/perf/contraction_timings.jsonl) and copy to Mojo results/perf/
+if [ -x ./perf_contractions ]; then
+    echo "==> Running ./perf_contractions..."
+    ./perf_contractions 6 2 16 generated/perf/contraction_timings.jsonl || true
+    MOJO_RESULTS_PERF="${SCRIPT_DIR}/../chemtensor_mojo/chemtensor_mojo/results/perf"
+    if [ -d "$(dirname "$MOJO_RESULTS_PERF")" ]; then
+        mkdir -p "$MOJO_RESULTS_PERF"
+        for f in generated/perf/*.jsonl; do
+            [ -f "$f" ] || continue
+            cp "$f" "$MOJO_RESULTS_PERF/" && echo "  Copied $f -> Mojo results/perf/"
+        done
+    fi
 fi
 
 cd .. || true
