@@ -10,7 +10,9 @@
  * Reads shared config from ../../bench_config.json (relative to build/).
  * CLI args override config values.
  *
- * Usage: perf_contractions [config_path] [nsites] [d] [chi_max]
+ * Usage: perf_contractions [--mpo-mpo] [-h|--help] [config_path] [nsites] [d] [chi_max]
+ *   --mpo-mpo    opt-in: time full MPO→dense contraction (exact Hilbert dim; very memory-heavy)
+ *   -h, --help   print usage
  *   config_path  default "../../bench_config.json"
  *   nsites       override from config
  *   d            override from config
@@ -72,6 +74,15 @@ static int read_bench_config(const char* path, int* nsites, long* d, long* chi_m
 	return 0;
 }
 
+static void print_usage(const char* prog)
+{
+	fprintf(stderr,
+	        "usage: %s [--mpo-mpo] [config_path] [nsites] [d] [chi_max]\n"
+	        "  --mpo-mpo   include MPO→full-matrix benchmark (uses O(d^2 nsites) memory; off by default)\n"
+	        "  -h, --help  show this message\n",
+	        prog ? prog : "perf_contractions");
+}
+
 /** Return non-zero if the string is an integer (optional sign, digits). */
 static int is_number(const char* s)
 {
@@ -129,12 +140,33 @@ int main(int argc, char** argv)
 	long chi_max = 16;
 	int num_runs = 3;
 	const char* config_path = DEFAULT_CONFIG_PATH;
+	int run_mpo_mpo = 0;
 
-	/* CLI: optional config path first (non-numeric), else legacy positional nsites/d/chi_max */
-	int argi = 1;
-	if (argc >= 2 && !is_number(argv[1])) {
-		config_path = argv[1];
-		argi = 2;
+	/* Collect flags and positional args (flags may appear anywhere) */
+	const char* plain[8];
+	int n_plain = 0;
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--mpo-mpo") == 0) {
+			run_mpo_mpo = 1;
+			continue;
+		}
+		if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+			print_usage(argv[0]);
+			return 0;
+		}
+		if (n_plain < (int)(sizeof(plain) / sizeof(plain[0])))
+			plain[n_plain++] = argv[i];
+		else {
+			fprintf(stderr, "perf_contractions: too many arguments\n");
+			print_usage(argv[0]);
+			return -1;
+		}
+	}
+
+	/* positional: optional config path first (non-numeric), then nsites d chi_max */
+	int pi = 0;
+	if (pi < n_plain && !is_number(plain[pi])) {
+		config_path = plain[pi++];
 	}
 
 	/* Read shared config file (defaults if missing) */
@@ -147,14 +179,22 @@ int main(int argc, char** argv)
 	}
 
 	/* Positional overrides (legacy): nsites d chi_max */
-	if (argc > argi) nsites  = atoi(argv[argi++]);
-	if (argc > argi) d       = (long)atol(argv[argi++]);
-	if (argc > argi) chi_max = (long)atol(argv[argi++]);
-
-	if (nsites < 2 || d < 1 || chi_max < 1) {
-		fprintf(stderr, "usage: perf_contractions [config_path] [nsites] [d] [chi_max]\n");
+	if (pi < n_plain) nsites  = atoi(plain[pi++]);
+	if (pi < n_plain) d       = (long)atol(plain[pi++]);
+	if (pi < n_plain) chi_max = (long)atol(plain[pi++]);
+	if (pi < n_plain) {
+		fprintf(stderr, "perf_contractions: unexpected extra argument \"%s\"\n", plain[pi]);
+		print_usage(argv[0]);
 		return -1;
 	}
+
+	if (nsites < 2 || d < 1 || chi_max < 1) {
+		print_usage(argv[0]);
+		return -1;
+	}
+
+	if (!run_mpo_mpo)
+		printf("MPO→full-matrix benchmark skipped (pass --mpo-mpo to enable).\n");
 
 	/* Build parameterized output path: contraction_timings_{nsites}_{d}_{chi_max}.jsonl */
 	char out_path[512];
@@ -204,8 +244,9 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	/* 1) MPO-MPO: time mpo_to_matrix (full contraction) */
-	{
+	/* 1) MPO-MPO: time mpo_to_matrix (full contraction); optional — exact d^(2*nsites) matrix */
+	int n_records = 0;
+	if (run_mpo_mpo) {
 		struct block_sparse_tensor mat;
 		uint64_t t0 = get_time_ticks();
 		for (int r = 0; r < num_runs; r++) {
@@ -218,6 +259,7 @@ int main(int argc, char** argv)
 		delete_block_sparse_tensor(&mat);
 		printf("mpo_mpo: %.6f s (result=%.9g)\n", sec, nrm);
 		write_jsonl_record(out, "mpo_mpo", nsites, d, chi_max, sec, nrm, num_runs);
+		n_records++;
 	}
 
 	/* 2) MPS-MPO inner product <chi|op|psi> (result is float for CT_SINGLE_REAL) */
@@ -230,6 +272,7 @@ int main(int argc, char** argv)
 		double sec = (t1 - t0) / ticks_per_sec / num_runs;
 		printf("mps_mpo_inner: %.6f s (result=%.9g)\n", sec, (double)s_inner);
 		write_jsonl_record(out, "mps_mpo_inner", nsites, d, chi_max, sec, (double)s_inner, num_runs);
+		n_records++;
 	}
 
 	/* 3) MPS-MPO apply: op|psi> -> op_psi */
@@ -246,6 +289,7 @@ int main(int argc, char** argv)
 		delete_mps(&op_psi);
 		printf("mps_mpo_apply: %.6f s (result=%.9g)\n", sec, nrm);
 		write_jsonl_record(out, "mps_mpo_apply", nsites, d, chi_max, sec, nrm, num_runs);
+		n_records++;
 	}
 
 	/* 4) MPS-MPS overlap <chi|psi> (result is float for CT_SINGLE_REAL) */
@@ -258,6 +302,7 @@ int main(int argc, char** argv)
 		double sec = (t1 - t0) / ticks_per_sec / num_runs;
 		printf("mps_mps: %.6f s (result=%.9g)\n", sec, (double)s_mps);
 		write_jsonl_record(out, "mps_mps", nsites, d, chi_max, sec, (double)s_mps, num_runs);
+		n_records++;
 	}
 
 	delete_mps(&chi);
@@ -265,6 +310,6 @@ int main(int argc, char** argv)
 	delete_mpo(&mpo);
 	ct_free(qsite);
 	fclose(out);
-	printf("Appended 4 records to %s\n", out_path);
+	printf("Appended %d records to %s\n", n_records, out_path);
 	return 0;
 }
