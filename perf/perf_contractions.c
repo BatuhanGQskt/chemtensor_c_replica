@@ -7,13 +7,13 @@
  * The Ising MPO is built via the normal API then converted to single precision
  * here (no changes to src/).
  *
- * Reads shared config from ../../bench_config.json (relative to build/).
+ * Reads contraction config from ../../bench_config_contraction.json (relative to build/).
  * CLI args override config values.
  *
  * Usage: perf_contractions [--mpo-mpo] [-h|--help] [config_path] [nsites] [d] [chi_max]
  *   --mpo-mpo    opt-in: time full MPO→dense contraction (exact Hilbert dim; very memory-heavy)
  *   -h, --help   print usage
- *   config_path  default "../../bench_config.json"
+ *   config_path  default "../../bench_config_contraction.json"
  *   nsites       override from config
  *   d            override from config
  *   chi_max      override from config
@@ -34,7 +34,7 @@
 #include "rng.h"
 #include "timing.h"
 
-#define DEFAULT_CONFIG_PATH "../../bench_config.json"
+#define DEFAULT_CONFIG_PATH "../../bench_config_contraction.json"
 #define OUTPUT_DIR "generated/perf"
 
 /** Minimal JSON config reader: extracts integer value for a given key. Returns -1 on miss. */
@@ -50,7 +50,7 @@ static long json_read_int(const char* json, const char* key)
 	return atol(pos);
 }
 
-/** Read bench_config.json into nsites/d/chi_max/num_runs. Returns 0 on success. */
+/** Read contraction config into nsites/d/chi_max/num_runs. Returns 0 on success. */
 static int read_bench_config(const char* path, int* nsites, long* d, long* chi_max, int* num_runs)
 {
 	FILE* f = fopen(path, "r");
@@ -169,7 +169,7 @@ int main(int argc, char** argv)
 		config_path = plain[pi++];
 	}
 
-	/* Read shared config file (defaults if missing) */
+	/* Read config file (defaults if missing). */
 	if (read_bench_config(config_path, &nsites, &d, &chi_max, &num_runs) == 0) {
 		printf("Loaded config from %s: nsites=%d, d=%ld, chi_max=%ld, num_runs=%d\n",
 		       config_path, nsites, d, chi_max, num_runs);

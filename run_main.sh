@@ -3,19 +3,25 @@
 # Touch main.c so that included manual_tests/mpo.c changes are picked up on rebuild.
 # Output: generated/mpo/*.json, generated/dmrg/*.json, generated/mps/*.json (created under build/ when run from build).
 #
-# Usage: run_main.sh [--build] [--mpo-mpo] [--dmrg-only]
+# Usage: run_main.sh [--build] [--mpo-mpo] [--dmrg-only] [--contractions-only] [--no-clean]
 #   --build       run cmake and make before executing (default: skip build, run only)
 #   --mpo-mpo     pass through to perf_contractions (full MPO→matrix benchmark; huge memory)
 #   --dmrg-only   skip perf_contractions (./main still runs; DMRG timings written from dmrg tests)
+#   --contractions-only run ./main --skip-dmrg so contraction runs do not execute DMRG tests
+#   --no-clean    skip removing stale JSONL files (use during benchmark sweeps)
 
 DO_BUILD=0
 DMRG_ONLY=0
+CONTRACTIONS_ONLY=0
+NO_CLEAN=0
 PERF_CONTRACTION_FLAGS=()
 for arg in "$@"; do
     case "$arg" in
         --build) DO_BUILD=1 ;;
         --mpo-mpo) PERF_CONTRACTION_FLAGS+=(--mpo-mpo) ;;
         --dmrg-only) DMRG_ONLY=1 ;;
+        --contractions-only) CONTRACTIONS_ONLY=1 ;;
+        --no-clean) NO_CLEAN=1 ;;
     esac
 done
 
@@ -29,7 +35,7 @@ cd "$SCRIPT_DIR" || exit 1
 
 echo "==> Working directory: $SCRIPT_DIR"
 
-# Use incremental build so bench_config.json changes don't require rebuild (config is read at runtime)
+# Use incremental build so runtime config changes don't require rebuild
 mkdir -p build
 cd build || exit 1
 
@@ -58,16 +64,26 @@ fi
 mkdir -p generated/mpo generated/dmrg generated/mps generated/perf
 
 # Drop *.jsonl from old bench configs (append-only benchmarks never delete stale filenames)
-BENCH_JSON="${SCRIPT_DIR}/../bench_config.json"
+BENCH_CONTRACTION_JSON="${SCRIPT_DIR}/../bench_config_contraction.json"
+DMRG_JSON="${SCRIPT_DIR}/../dmrg_config.json"
 PERF_JSONL_CLEANER="${SCRIPT_DIR}/perf/clean_stale_perf_jsonl.py"
-if [ -f "$BENCH_JSON" ] && [ -f "$PERF_JSONL_CLEANER" ]; then
-    echo "==> Pruning stale generated/perf/*.jsonl (not in $BENCH_JSON)..."
-    python3 "$PERF_JSONL_CLEANER" "$SCRIPT_DIR/build/generated/perf" "$BENCH_JSON" || true
+if [ "$NO_CLEAN" -eq 0 ] && [ -f "$PERF_JSONL_CLEANER" ]; then
+    if [ -f "$BENCH_CONTRACTION_JSON" ] || [ -f "$DMRG_JSON" ]; then
+        echo "==> Pruning stale generated/perf/*.jsonl (not in active config files)..."
+        python3 "$PERF_JSONL_CLEANER" \
+            "$SCRIPT_DIR/build/generated/perf" \
+            "$BENCH_CONTRACTION_JSON" \
+            "$DMRG_JSON" || true
+    fi
 fi
 
 echo "==> Running ./main..."
 set +e
-./main
+MAIN_FLAGS=()
+if [ "$CONTRACTIONS_ONLY" -eq 1 ]; then
+    MAIN_FLAGS+=(--skip-dmrg)
+fi
+./main "${MAIN_FLAGS[@]}"
 MAIN_EXIT=$?
 set -e
 if [ "$MAIN_EXIT" -ne 0 ]; then
@@ -108,9 +124,12 @@ fi
 if [ -d "$(dirname "$MOJO_RESULTS_PERF")" ]; then
     mkdir -p generated/perf
     mkdir -p "$MOJO_RESULTS_PERF"
-    if [ -f "$BENCH_JSON" ] && [ -f "$PERF_JSONL_CLEANER" ]; then
-        echo "==> Pruning stale Mojo results/perf/*.jsonl (not in $BENCH_JSON)..."
-        python3 "$PERF_JSONL_CLEANER" "$MOJO_RESULTS_PERF" "$BENCH_JSON" || true
+    if [ "$NO_CLEAN" -eq 0 ] && [ -f "$PERF_JSONL_CLEANER" ] && { [ -f "$BENCH_CONTRACTION_JSON" ] || [ -f "$DMRG_JSON" ]; }; then
+        echo "==> Pruning stale Mojo results/perf/*.jsonl (not in active config files)..."
+        python3 "$PERF_JSONL_CLEANER" \
+            "$MOJO_RESULTS_PERF" \
+            "$BENCH_CONTRACTION_JSON" \
+            "$DMRG_JSON" || true
     fi
     for f in generated/perf/*.jsonl generated/perf/random_mps_psi.json generated/perf/random_mps_chi.json; do
         [ -f "$f" ] || continue

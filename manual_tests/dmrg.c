@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 
 static int g_dmrg_tests_failed = 0;
-static const char* DMRG_CONFIG_PATH = "../../bench_config.json";
+static const char* DMRG_CONFIG_PATH = "../../dmrg_config.json";
 
 struct dmrg_bench_params
 {
@@ -74,8 +74,9 @@ static double json_read_double(const char* json, const char* key)
 static void load_dmrg_bench_config(void)
 {
 	FILE* f = fopen(DMRG_CONFIG_PATH, "r");
+	const char* used_config_path = DMRG_CONFIG_PATH;
 	if (!f) {
-		printf("DMRG config %s not found, using defaults\n", DMRG_CONFIG_PATH);
+		printf("DMRG config not found (%s), using defaults\n", DMRG_CONFIG_PATH);
 		return;
 	}
 	fseek(f, 0, SEEK_END);
@@ -93,6 +94,7 @@ static void load_dmrg_bench_config(void)
 	fread(buf, 1, (size_t)sz, f);
 	buf[sz] = '\0';
 	fclose(f);
+	printf("Loaded DMRG config from %s\n", used_config_path);
 
 	long v;
 	double x;
@@ -196,9 +198,13 @@ static void make_dmrg_perf_path(
 	const char* name,
 	int nsites,
 	long d,
-	long chi_max)
+	long chi_max,
+	int num_sweeps)
 {
-	snprintf(out_path, out_size, "generated/perf/%s_timings_%d_%ld_%ld.jsonl", name, nsites, d, chi_max);
+	snprintf(
+		out_path, out_size, "generated/perf/%s_timings_%d_%ld_%ld_%d.jsonl",
+		name, nsites, d, chi_max, num_sweeps
+	);
 }
 
 static double get_time_seconds(void)
@@ -357,7 +363,7 @@ void test_dmrg_singlesite_manual(void)
 
 	// ---- save timing to JSONL (for performance comparison with Mojo) ----
 	char perf_path[512];
-	make_dmrg_perf_path(perf_path, sizeof(perf_path), "dmrg_singlesite", nsites, d, max_vdim);
+	make_dmrg_perf_path(perf_path, sizeof(perf_path), "dmrg_singlesite", nsites, d, max_vdim, num_sweeps);
 	if (append_dmrg_timing_jsonl(perf_path,
 	                              "dmrg_singlesite", nsites, (int)d, (int)max_vdim, num_sweeps,
 	                              maxiter_lanczos, J, D, h, -1.0,
@@ -499,7 +505,7 @@ void test_dmrg_twosite_manual(void)
 
 	// ---- save timing to JSONL (for performance comparison with Mojo) ----
 	char perf_path[512];
-	make_dmrg_perf_path(perf_path, sizeof(perf_path), "dmrg_twosite", nsites, d, max_vdim);
+	make_dmrg_perf_path(perf_path, sizeof(perf_path), "dmrg_twosite", nsites, d, max_vdim, num_sweeps);
 	if (append_dmrg_timing_jsonl(perf_path,
 	                              "dmrg_twosite", nsites, (int)d, (int)max_vdim, num_sweeps,
 	                              maxiter_lanczos, J, D, h, tol_split,
@@ -535,8 +541,8 @@ void dmrg_tests(void)
 
 	print_separator("All DMRG Manual Tests Completed");
 	printf("\nSummary:\n");
-	printf("  - Single-site DMRG (Heisenberg XXZ, params from bench_config.json)\n");
-	printf("  - Two-site DMRG   (Heisenberg XXZ, params from bench_config.json)\n");
+	printf("  - Single-site DMRG (Heisenberg XXZ, params from dmrg_config.json)\n");
+	printf("  - Two-site DMRG   (Heisenberg XXZ, params from dmrg_config.json)\n");
 	if (g_dmrg_tests_failed) {
 		fprintf(stderr, "\nDMRG tests FAILED (norm or final energy check)\n");
 		exit(1);
